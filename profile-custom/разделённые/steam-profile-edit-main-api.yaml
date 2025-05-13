@@ -1,0 +1,126 @@
+openapi: 3.0.1
+info:
+  title: Steam Profile Edit API
+  description: API для редактирования основной части профиля пользователя Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Profile
+    description: Операции с профилем пользователя
+
+paths:
+  /profiles/{steamid}/edit/:
+    post:
+      tags: [Profile]
+      summary: Обновление профиля пользователя
+      description: Позволяет обновить информацию профиля Steam
+      operationId: updateProfile
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{17}$'
+            example: "76561199856322336"
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionID:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: "4c7750f3ef2fb2dd3f535926"
+                type:
+                  type: string
+                  description: Тип операции (должно быть profileSave)
+                  enum: [profileSave]
+                  default: "profileSave"
+                personaName:
+                  type: string
+                  description: Отображаемое имя пользователя
+                  example: "ukirilenko4304"
+                real_name:
+                  type: string
+                  description: Настоящее имя пользователя
+                  example: "Ульяна"
+                customURL:
+                  type: string
+                  description: Пользовательский URL профиля
+                country:
+                  type: string
+                  description: Код страны
+                state:
+                  type: string
+                  description: Код региона/штата
+                city:
+                  type: string
+                  description: ID города
+                summary:
+                  type: string
+                  description: Описание профиля
+                hide_profile_awards:
+                  type: integer
+                  description: Скрывать награды профиля (0 - нет, 1 - да)
+                  enum: [0, 1]
+                  default: 0
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum: [1]
+                  default: 1
+              required:
+                - sessionID
+                - type
+                - json
+      responses:
+        '200':
+          description: Успешное обновление профиля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileUpdateResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    ProfileUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum: [1]
+          description: Флаг успешного выполнения (1 - успех)
+        errmsg:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+      example:
+        success: 1
+        errmsg: ""
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid (должен совпадать с параметром sessionID в форме)
+        - browserid

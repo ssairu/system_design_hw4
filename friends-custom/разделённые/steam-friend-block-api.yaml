@@ -1,0 +1,119 @@
+openapi: 3.0.1
+info:
+  title: Steam Friend Block API
+  version: 1.0.0
+  description: API для блокировки/разблокировки и просмотра списка заблокированных пользователей.
+
+servers:
+  - url: https://steamcommunity.com
+
+tags:
+  - name: FriendBlock
+    description: Блок / разблок пользователя
+
+paths:
+  /actions/Friends/Block:
+    post:                      
+      tags: [FriendBlock]
+      summary: Заблокировать пользователя
+      operationId: blockUser
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlockUserBody' }
+      responses:
+        '200': { $ref: '#/components/responses/BlockOk' }
+        '400': { description: Неверный запрос }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+    get:
+      tags: [FriendBlock]
+      summary: Список заблокированных
+      operationId: listBlocked
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer,
+            enum: [1],
+            default: 1 
+          }
+      responses:
+        '200':
+          description: Возвращает список заблокированных
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlockListResponse' }
+        '401': { description: Требуется вход в Steam }
+
+  /actions/Friends/Block/{steamid}:
+    delete:
+      tags: [FriendBlock]
+      summary: Разблокировать пользователя
+      operationId: unblockUser
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: steamid
+          required: true
+          schema: { type: string, example: "76561198123456789" }
+      responses:
+        '200': { $ref: '#/components/responses/BlockOk' }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+components:
+  schemas:
+    BlockUserBody:
+      type: object
+      properties:
+        steamid: { type: string, example: "76561198123456789" }
+        reason:  { type: string, maxLength: 200, example: "Spam" }
+      required: [steamid]
+
+    BlockActionResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: "User blocked" }
+      required: [success]
+
+    BlockListResponse:
+      type: object
+      properties:
+        total:   { type: integer, example: 2 }
+        blocked:
+          type: array
+          items: { $ref: '#/components/schemas/BlockedUser' }
+      required: [total, blocked]
+
+    BlockedUser:
+      type: object
+      properties:
+        steamid:     { type: string, example: "76561198123456789" }
+        personaName: { type: string, example: "portes_46_hater" }
+        blockedAt:
+          type: string
+          format: date-time
+          example: "2025-03-03T13:03:03Z"
+      required: [steamid, blockedAt]
+
+  responses:
+    BlockOk:
+      description: Операция выполнена
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/BlockActionResponse' }
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется авторизация (cookies: steamLoginSecure, sessionid)

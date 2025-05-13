@@ -1,0 +1,138 @@
+openapi: 3.0.1
+info:
+  title: Steam Privacy Settings API
+  description: API для управления настройками приватности профиля Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Privacy
+    description: Управление настройками приватности
+
+paths:
+  /profiles/{steamid}/ajaxsetprivacy/:
+    post:
+      tags: [Privacy]
+      summary: Обновление настроек приватности
+      description: Позволяет изменить настройки приватности профиля Steam
+      operationId: updatePrivacySettings
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{17}$'
+            example: "76561199856322336"
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: "4c7750f3ef2fb2dd3f535926"
+                Privacy:
+                  type: string
+                  format: json
+                  description: JSON-объект с настройками приватности
+                  example: |
+                    {
+                      "PrivacyProfile": 2,
+                      "PrivacyInventory": 2,
+                      "PrivacyInventoryGifts": 1,
+                      "PrivacyOwnedGames": 2,
+                      "PrivacyPlaytime": 3,
+                      "PrivacyFriendsList": 3
+                    }
+                eCommentPermission:
+                  type: integer
+                  description: Настройки комментирования профиля
+                  enum: [0, 1]
+                  example: 0
+              required:
+                - sessionid
+                - Privacy
+                - eCommentPermission
+      responses:
+        '200':
+          description: Успешное обновление настроек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacySettingsResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    PrivacySettingsResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum: [1]
+          description: Флаг успешного выполнения (1 - успех)
+        Privacy:
+          type: object
+          properties:
+            PrivacySettings:
+              type: object
+              properties:
+                PrivacyProfile:
+                  type: integer
+                  description: Уровень приватности профиля
+                PrivacyInventory:
+                  type: integer
+                  description: Уровень приватности инвентаря
+                PrivacyInventoryGifts:
+                  type: integer
+                  description: Уровень приватности подарков
+                PrivacyOwnedGames:
+                  type: integer
+                  description: Уровень приватности списка игр
+                PrivacyPlaytime:
+                  type: integer
+                  description: Уровень приватности времени игры
+                PrivacyFriendsList:
+                  type: integer
+                  description: Уровень приватности списка друзей
+            eCommentPermission:
+              type: integer
+              description: Настройки комментирования профиля
+      example:
+        success: 1
+        Privacy:
+          PrivacySettings:
+            PrivacyProfile: 2
+            PrivacyInventory: 2
+            PrivacyInventoryGifts: 1
+            PrivacyOwnedGames: 2
+            PrivacyPlaytime: 3
+            PrivacyFriendsList: 2
+          eCommentPermission: 0
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid (должен совпадать с параметром в форме)
+        - browserid

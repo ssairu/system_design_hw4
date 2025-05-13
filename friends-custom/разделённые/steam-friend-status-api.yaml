@@ -1,0 +1,136 @@
+openapi: 3.0.1
+info:
+  title: Steam Friend Status API
+  version: 1.0.0
+  description: API для получения статуса друзей и обновления своего статуса
+
+servers:
+  - url: https://steamcommunity.com
+
+tags:
+  - name: FriendStatus
+    description: Получение и изменение статуса онлайн
+
+paths:
+  /actions/Friends/Status:
+    get:
+      tags: [FriendStatus]
+      summary: Список статусов друзей
+      operationId: listFriendStatuses
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer, 
+            enum: [1],
+            default: 1 
+          }
+      responses:
+        '200':
+          description: Текущие статусы всех друзей
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendStatusList' }
+        '401': { description: Требуется вход в Steam }
+
+    put:
+      tags: [FriendStatus]
+      summary: Обновить собственный статус
+      operationId: updateMyStatus
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateStatusBody' }
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatusUpdateResponse' }
+        '400': { description: Некорректный статус }
+        '401': { description: Требуется вход в Steam }
+
+  /actions/Friends/Status/{steamid}:
+    get:
+      tags: [FriendStatus]
+      summary: Статус конкретного друга
+      operationId: getFriendStatus
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: steamid
+          required: true
+          schema: { type: string, example: "76561198123456789" }
+      responses:
+        '200':
+          description: Статус найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendStatus' }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+components:
+  schemas:
+    UpdateStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, invisible, playing]
+          example: online
+        nowPlaying:
+          type: string
+          description: Название игры или трека (необязательно)
+          example: "Counter-Strike 2"
+      required: [status]
+
+    FriendStatusList:
+      type: object
+      properties:
+        total:   { type: integer, example: 5 }
+        online:  { type: integer, example: 3 }
+        statuses:
+          type: array
+          items: { $ref: '#/components/schemas/FriendStatus' }
+      required: [total, statuses]
+
+    FriendStatus:
+      type: object
+      properties:
+        steamid:     { type: string, example: "76561198123456789" }
+        personaName: { type: string, example: "portes_46" }
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, invisible, playing]
+          example: playing
+        lastOnline:
+          type: string
+          format: date-time
+          example: "2025-05-05T15:05:05Z"
+        nowPlaying:
+          type: string
+          example: "Dota 2"
+      required: [steamid, status]
+
+    StatusUpdateResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: "Status set to away" }
+      required: [success]
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется авторизация, cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

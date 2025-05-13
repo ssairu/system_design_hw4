@@ -1,0 +1,136 @@
+openapi: 3.0.1
+info:
+  title: Steam MiniProfile API
+  description: API для получения информации мини-профиля пользователя Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+paths:
+  /miniprofile/{steamid}/json/:
+    get:
+      tags:
+        - Profile
+      summary: Получение данных мини-профиля
+      description: Возвращает базовую информацию профиля для миниатюрного отображения
+      operationId: getMiniProfile
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: integer
+            example: 1896056608
+        - name: origin
+          in: query
+          description: URL источника запроса (необходим для CORS)
+          required: true
+          schema:
+            type: string
+            example: "https://steamcommunity.com"
+      responses:
+        '200':
+          description: Успешный ответ с данными мини-профиля
+          headers:
+            cache-control:
+              schema:
+                type: string
+              example: "private,max-age=120"
+            content-encoding:
+              schema:
+                type: string
+              example: "gzip"
+            content-type:
+              schema:
+                type: string
+              example: "application/json; charset=utf-8"
+            x-frame-options:
+              schema:
+                type: string
+              example: "SAMEORIGIN"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProfile'
+              example:
+                level: 0
+                level_class: "friendPlayerLevel lvl_0"
+                avatar_url: "https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg"
+                persona_name: "ukirilenko4304"
+      security:
+        - steamAuth: []
+      x-code-samples:
+        - lang: curl
+          source: |
+            curl -X GET "https://steamcommunity.com/miniprofile/1896056608/json/?origin=https://steamcommunity.com/" \
+              -H "Accept: application/json" \
+              -H "Referer: https://steamcommunity.com/profiles/76561199856322336/edit/miniprofile"
+
+components:
+  schemas:
+    MiniProfile:
+      type: object
+      properties:
+        level:
+          type: integer
+          description: Уровень Steam профиля
+          example: 42
+        level_class:
+          type: string
+          description: CSS-класс для отображения уровня
+          example: "friendPlayerLevel lvl_42"
+        avatar_url:
+          type: string
+          format: uri
+          description: URL аватара в полном размере
+          example: "https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg"
+        persona_name:
+          type: string
+          description: Текущее отображаемое имя пользователя
+          example: "ukirilenko4304"
+      required:
+        - level
+        - level_class
+        - avatar_url
+        - persona_name
+
+  securitySchemes:
+    steamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Необходимые cookies:
+        - steamLoginSecure - основной токен аутентификации
+        - sessionid - идентификатор сессии
+
+  headers:
+    Steam-MiniProfile-Headers:
+      description: Стандартные заголовки для запросов мини-профиля
+      headers:
+        Accept:
+          schema:
+            type: string
+          example: "application/json, text/plain, */*"
+        Referer:
+          schema:
+            type: string
+          example: "https://steamcommunity.com/profiles/76561199856322336/edit/miniprofile"
+        Sec-Ch-Ua:
+          schema:
+            type: string
+          example: '"Not A(Brand";v="8", "Chromium";v="132", "YaBrowser";v="25.2", "Yowser";v="2.5"'
+        Sec-Ch-Ua-Mobile:
+          schema:
+            type: string
+          example: "?0"
+        Sec-Ch-Ua-Platform:
+          schema:
+            type: string
+          example: '"macOS"'
+        User-Agent:
+          schema:
+            type: string
+          example: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 YaBrowser/25.2.0.0 Safari/537.36"

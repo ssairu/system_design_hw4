@@ -1,0 +1,98 @@
+openapi: 3.0.1
+info:
+  title: Steam Emoticon Data API
+  description: API для получения информации о доступных эмотиконах пользователя
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Emoticons
+    description: Операции с эмотиконами Steam
+
+paths:
+  /actions/EmoticonData:
+    get:
+      tags: [Emoticons]
+      summary: Получение списка эмотиконов
+      description: Возвращает список доступных эмотиконов для пользователя
+      operationId: getEmoticonData
+      security:
+        - SteamAuth: []
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmoticonDataResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    EmoticonDataResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum: [1]
+          description: Флаг успешного выполнения
+        emoticons:
+          type: array
+          description: Список доступных эмотиконов
+          items:
+            $ref: '#/components/schemas/Emoticon'
+        rwgrsn:
+          type: integer
+          description: Код состояния (обычно -2)
+          example: -2
+
+    Emoticon:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Идентификатор эмотикона (для использования в чате)
+          example: ":steamhappy:"
+        count:
+          type: integer
+          description: Количество доступных использований
+          example: 1
+        time_last_used:
+          type: integer
+          nullable: true
+          description: Timestamp последнего использования (null если не использовался)
+        use_count:
+          type: integer
+          nullable: true
+          description: Общее количество использований
+        time_received:
+          type: integer
+          description: Timestamp получения эмотикона
+          example: 1608055200
+        appid:
+          type: integer
+          description: ID приложения, связанного с эмотиконом (0 для стандартных)
+          example: 0
+      required:
+        - name
+        - count
+        - time_received
+        - appid
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

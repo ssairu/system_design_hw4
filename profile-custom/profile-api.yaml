@@ -1,0 +1,791 @@
+openapi: 3.0.1
+info:
+  title: Steam Player Profile API
+  description: API для управления профилем Steam
+  version: 1.0.0
+servers:
+  - url: https://api.steampowered.com
+    description: Основной API сервер Steam
+tags:
+  - name: ProfileThemes
+    description: Операции с темами профиля
+paths:
+  /IPlayerService/SetProfileTheme/v1:
+    post:
+      tags:
+        - ProfileThemes
+      summary: Установка темы профиля
+      description: Позволяет установить тему для профиля Steam пользователя
+      operationId: setProfileTheme
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: access_token
+          in: query
+          description: JWT токен доступа Steam
+          required: true
+          schema:
+            type: string
+            example: >-
+              eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNjQ4NEU2Q19ERjY3NiIsICJzdWIiOiAiNzY1NjExOTk4NTYzMjIzMzYiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDcxMzM1MzAsICJuYmYiOiAxNzM4NDA3MTA4LCAiaWF0IjogMTc0NzA0NzEwOCwgImp0aSI6ICIwMDA5XzI2NDg0RTZDX0U2MTFBIiwgIm9hdCI6IDE3NDcwNDY5OTQsICJydF9leHAiOiAxNzQ5NjQzNjM4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTk1LjE5LjQyLjIyOSIsICJpcF9jb25maXJtZXIiOiAiMTk1LjE5LjQyLjIyOSIgfQ.H7E26ylDKUvTsrJJvMEzE_h6mOLuTiR6-T1IN8EB0AoGzX_mjS2znGLrQKIYaa1BYr3SQ2ZzuhW6Wa4SG-u7CA
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                input_protobuf_encoded:
+                  type: string
+                  description: Base64-кодированные protobuf-данные с идентификатором темы
+                  example: CgZDb3NtaWM=
+              required:
+                - input_protobuf_encoded
+      responses:
+        '200':
+          description: Тема профиля успешно изменена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: object
+                    description: Пустой объект при успешном выполнении
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+  /profiles/{steamid}/ajaxsetprivacy/:
+    post:
+      tags:
+        - Privacy
+      summary: Обновление настроек приватности
+      description: Позволяет изменить настройки приватности профиля Steam
+      operationId: updatePrivacySettings
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{17}$
+            example: '76561199856322336'
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: 4c7750f3ef2fb2dd3f535926
+                Privacy:
+                  type: string
+                  format: json
+                  description: JSON-объект с настройками приватности
+                  example: |
+                    {
+                      "PrivacyProfile": 2,
+                      "PrivacyInventory": 2,
+                      "PrivacyInventoryGifts": 1,
+                      "PrivacyOwnedGames": 2,
+                      "PrivacyPlaytime": 3,
+                      "PrivacyFriendsList": 3
+                    }
+                eCommentPermission:
+                  type: integer
+                  description: Настройки комментирования профиля
+                  enum:
+                    - 0
+                    - 1
+                  example: 0
+              required:
+                - sessionid
+                - Privacy
+                - eCommentPermission
+      responses:
+        '200':
+          description: Успешное обновление настроек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacySettingsResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+  /profiles/{steamid}/edit/:
+    post:
+      tags:
+        - Profile
+      summary: Обновление профиля пользователя
+      description: Позволяет обновить информацию профиля Steam
+      operationId: updateProfile
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: string
+            pattern: ^\d{17}$
+            example: '76561199856322336'
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionID:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: 4c7750f3ef2fb2dd3f535926
+                type:
+                  type: string
+                  description: Тип операции (должно быть profileSave)
+                  enum:
+                    - profileSave
+                  default: profileSave
+                personaName:
+                  type: string
+                  description: Отображаемое имя пользователя
+                  example: ukirilenko4304
+                real_name:
+                  type: string
+                  description: Настоящее имя пользователя
+                  example: Ульяна
+                customURL:
+                  type: string
+                  description: Пользовательский URL профиля
+                country:
+                  type: string
+                  description: Код страны
+                state:
+                  type: string
+                  description: Код региона/штата
+                city:
+                  type: string
+                  description: ID города
+                summary:
+                  type: string
+                  description: Описание профиля
+                hide_profile_awards:
+                  type: integer
+                  description: Скрывать награды профиля (0 - нет, 1 - да)
+                  enum:
+                    - 0
+                    - 1
+                  default: 0
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum:
+                    - 1
+                  default: 1
+              required:
+                - sessionID
+                - type
+                - json
+      responses:
+        '200':
+          description: Успешное обновление профиля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileUpdateResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+  /miniprofile/{steamid}/json/:
+    get:
+      tags:
+        - Profile
+      summary: Получение данных мини-профиля
+      description: Возвращает базовую информацию профиля для миниатюрного отображения
+      operationId: getMiniProfile
+      parameters:
+        - name: steamid
+          in: path
+          description: SteamID пользователя
+          required: true
+          schema:
+            type: integer
+            example: 1896056608
+        - name: origin
+          in: query
+          description: URL источника запроса (необходим для CORS)
+          required: true
+          schema:
+            type: string
+            example: https://steamcommunity.com
+      responses:
+        '200':
+          description: Успешный ответ с данными мини-профиля
+          headers:
+            cache-control:
+              schema:
+                type: string
+              example: private,max-age=120
+            content-encoding:
+              schema:
+                type: string
+              example: gzip
+            content-type:
+              schema:
+                type: string
+              example: application/json; charset=utf-8
+            x-frame-options:
+              schema:
+                type: string
+              example: SAMEORIGIN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProfile'
+              example:
+                level: 0
+                level_class: friendPlayerLevel lvl_0
+                avatar_url: >-
+                  https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg
+                persona_name: ukirilenko4304
+      security:
+        - steamAuth: []
+      x-code-samples:
+        - lang: curl
+          source: >
+            curl -X GET
+            "https://steamcommunity.com/miniprofile/1896056608/json/?origin=https://steamcommunity.com/"
+            \
+              -H "Accept: application/json" \
+              -H "Referer: https://steamcommunity.com/profiles/76561199856322336/edit/miniprofile"
+  /actions/EmoticonData:
+    get:
+      tags:
+        - Emoticons
+      summary: Получение списка эмотиконов
+      description: Возвращает список доступных эмотиконов для пользователя
+      operationId: getEmoticonData
+      security:
+        - SteamAuth: []
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmoticonDataResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '429':
+          description: Слишком много запросов
+  /actions/FileUploader/:
+    post:
+      tags:
+        - Avatar
+      summary: Загрузка пользовательского аватара
+      description: >-
+        Позволяет загрузить пользовательское изображение в качестве аватара
+        профиля
+      operationId: uploadAvatar
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Файл изображения для загрузки
+                type:
+                  type: string
+                  description: Тип загружаемого файла (должно быть player_avatar_image)
+                  enum:
+                    - player_avatar_image
+                  default: player_avatar_image
+                sId:
+                  type: string
+                  description: SteamID пользователя
+                  example: '76561199856322336'
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: 4c7750f3ef2fb2dd3f535926
+                doSub:
+                  type: integer
+                  description: Флаг подтверждения загрузки (должен быть 1)
+                  enum:
+                    - 1
+                  default: 1
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum:
+                    - 1
+                  default: 1
+              required:
+                - avatar
+                - type
+                - sId
+                - sessionid
+                - doSub
+                - json
+      responses:
+        '200':
+          description: Успешная загрузка аватара
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '413':
+          description: Файл слишком большой
+        '429':
+          description: Слишком много запросов
+  /ogg/{appid}/selectAvatar:
+    post:
+      tags:
+        - Avatar
+      summary: Выбор игрового аватара
+      description: Устанавливает выбранный аватар из игры в качестве аватара профиля
+      operationId: selectGameAvatar
+      parameters:
+        - name: appid
+          in: path
+          description: Steam ID игры
+          required: true
+          schema:
+            type: integer
+            example: 2944200
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: 4c7750f3ef2fb2dd3f535926
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum:
+                    - 1
+                  default: 1
+                selectedAvatar:
+                  type: integer
+                  description: >-
+                    Порядковый номер выбранного аватара (ordinal из списка
+                    аватаров)
+                  example: 0
+              required:
+                - sessionid
+                - json
+                - selectedAvatar
+      responses:
+        '200':
+          description: Успешное изменение аватара
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarSelectionResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+  /actions/GameAvatars/:
+    get:
+      tags:
+        - Avatars
+      summary: Получение списка игровых аватаров
+      description: |
+        Возвращает список доступных игровых аватаров, сгруппированных по играм.
+        Включает аватары из недавних, приобретенных и других доступных игр.
+      operationId: getGameAvatars
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: json
+          in: query
+          description: Флаг для возврата ответа в JSON формате (должен быть 1)
+          required: true
+          schema:
+            type: integer
+            enum:
+              - 1
+            default: 1
+        - name: l
+          in: query
+          description: Язык интерфейса (например, russian)
+          required: false
+          schema:
+            type: string
+            example: russian
+      responses:
+        '200':
+          description: Успешный ответ со списком аватаров
+          headers:
+            cache-control:
+              description: Директивы кэширования
+              schema:
+                type: string
+                example: private,max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameAvatarsResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+components:
+  securitySchemes:
+    SteamAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен доступа Steam
+      in: cookie
+      name: steamLoginSecure
+    steamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Необходимые cookies:
+        - steamLoginSecure - основной токен аутентификации
+        - sessionid - идентификатор сессии
+  schemas:
+    PrivacySettingsResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum:
+            - 1
+          description: Флаг успешного выполнения (1 - успех)
+        Privacy:
+          type: object
+          properties:
+            PrivacySettings:
+              type: object
+              properties:
+                PrivacyProfile:
+                  type: integer
+                  description: Уровень приватности профиля
+                PrivacyInventory:
+                  type: integer
+                  description: Уровень приватности инвентаря
+                PrivacyInventoryGifts:
+                  type: integer
+                  description: Уровень приватности подарков
+                PrivacyOwnedGames:
+                  type: integer
+                  description: Уровень приватности списка игр
+                PrivacyPlaytime:
+                  type: integer
+                  description: Уровень приватности времени игры
+                PrivacyFriendsList:
+                  type: integer
+                  description: Уровень приватности списка друзей
+            eCommentPermission:
+              type: integer
+              description: Настройки комментирования профиля
+      example:
+        success: 1
+        Privacy:
+          PrivacySettings:
+            PrivacyProfile: 2
+            PrivacyInventory: 2
+            PrivacyInventoryGifts: 1
+            PrivacyOwnedGames: 2
+            PrivacyPlaytime: 3
+            PrivacyFriendsList: 2
+          eCommentPermission: 0
+    ProfileUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum:
+            - 1
+          description: Флаг успешного выполнения (1 - успех)
+        errmsg:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+      example:
+        success: 1
+        errmsg: ''
+    MiniProfile:
+      type: object
+      properties:
+        level:
+          type: integer
+          description: Уровень Steam профиля
+          example: 42
+        level_class:
+          type: string
+          description: CSS-класс для отображения уровня
+          example: friendPlayerLevel lvl_42
+        avatar_url:
+          type: string
+          format: uri
+          description: URL аватара в полном размере
+          example: >-
+            https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg
+        persona_name:
+          type: string
+          description: Текущее отображаемое имя пользователя
+          example: ukirilenko4304
+      required:
+        - level
+        - level_class
+        - avatar_url
+        - persona_name
+    EmoticonDataResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum:
+            - 1
+          description: Флаг успешного выполнения
+        emoticons:
+          type: array
+          description: Список доступных эмотиконов
+          items:
+            $ref: '#/components/schemas/Emoticon'
+        rwgrsn:
+          type: integer
+          description: Код состояния (обычно -2)
+          example: -2
+    Emoticon:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Идентификатор эмотикона (для использования в чате)
+          example: ':steamhappy:'
+        count:
+          type: integer
+          description: Количество доступных использований
+          example: 1
+        time_last_used:
+          type: integer
+          nullable: true
+          description: Timestamp последнего использования (null если не использовался)
+        use_count:
+          type: integer
+          nullable: true
+          description: Общее количество использований
+        time_received:
+          type: integer
+          description: Timestamp получения эмотикона
+          example: 1608055200
+        appid:
+          type: integer
+          description: ID приложения, связанного с эмотиконом (0 для стандартных)
+          example: 0
+      required:
+        - name
+        - count
+        - time_received
+        - appid
+    AvatarUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Флаг успешного выполнения
+          example: true
+        images:
+          type: object
+          description: URL загруженного аватара в разных размерах
+          properties:
+            '0':
+              type: string
+              format: uri
+              description: URL маленького аватара (32x32)
+              example: >-
+                https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2.jpg
+            full:
+              type: string
+              format: uri
+              description: URL полного аватара (184x184)
+              example: >-
+                https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg
+            medium:
+              type: string
+              format: uri
+              description: URL среднего аватара (64x64)
+              example: >-
+                https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_medium.jpg
+        hash:
+          type: string
+          description: Хэш загруженного аватара
+          example: 3135c6ef90dd781768090f914ab270c281b762f2
+        message:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+          example: ''
+      required:
+        - success
+        - images
+        - hash
+        - message
+    AvatarSelectionResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum:
+            - 1
+          description: Флаг успешного выполнения (1 - успех)
+        message:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+      example:
+        success: 1
+        message: ''
+    GameAvatarsResponse:
+      type: object
+      properties:
+        baseAvaLink:
+          type: string
+          format: uri
+          description: Базовый URL для загрузки аватаров
+          example: >-
+            https://cdn.fastly.steamstatic.com/steamcommunity/public/images/avatars/
+        rgRecentGames:
+          type: array
+          description: Список недавно использованных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+        rgOwnedGames:
+          type: array
+          description: Список приобретенных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+        rgOtherGames:
+          type: array
+          description: Список других доступных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+      example:
+        baseAvaLink: >-
+          https://cdn.fastly.steamstatic.com/steamcommunity/public/images/avatars/
+        rgRecentGames: []
+        rgOwnedGames: []
+        rgOtherGames:
+          - appid: 3384330
+            name: Art Strikers
+            avatar_count: 1
+            avatars:
+              - ordinal: 0
+                avatar_hash: 4fb85ee791d84235f4f49a64887af6d402ad0cb6
+    GameInfo:
+      type: object
+      properties:
+        appid:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор игры в Steam
+        name:
+          type: string
+          description: Название игры
+        avatar_count:
+          type: integer
+          description: Количество доступных аватаров для этой игры
+        avatars:
+          type: array
+          description: Список доступных аватаров
+          items:
+            $ref: '#/components/schemas/AvatarInfo'
+    AvatarInfo:
+      type: object
+      properties:
+        ordinal:
+          type: integer
+          description: Порядковый номер аватара
+        avatar_hash:
+          type: string
+          description: Хэш аватара для формирования URL
+          example: 4fb85ee791d84235f4f49a64887af6d402ad0cb6
+  headers:
+    Steam-MiniProfile-Headers:
+      description: Стандартные заголовки для запросов мини-профиля
+      headers:
+        Accept:
+          schema:
+            type: string
+          example: application/json, text/plain, */*
+        Referer:
+          schema:
+            type: string
+          example: >-
+            https://steamcommunity.com/profiles/76561199856322336/edit/miniprofile
+        Sec-Ch-Ua:
+          schema:
+            type: string
+          example: >-
+            "Not A(Brand";v="8", "Chromium";v="132", "YaBrowser";v="25.2",
+            "Yowser";v="2.5"
+        Sec-Ch-Ua-Mobile:
+          schema:
+            type: string
+          example: '?0'
+        Sec-Ch-Ua-Platform:
+          schema:
+            type: string
+          example: '"macOS"'
+        User-Agent:
+          schema:
+            type: string
+          example: >-
+            Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
+            (KHTML, like Gecko) Chrome/132.0.0.0 YaBrowser/25.2.0.0
+            Safari/537.36

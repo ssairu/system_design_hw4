@@ -1,0 +1,161 @@
+openapi: 3.0.1
+info:
+  title: Steam Friends List API
+  description: API для получения списка друзей пользователя и поиска конкретного друга.
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Friends
+    description: Операции со списком друзей
+
+paths:
+  /actions/Friends/GetList:
+    get:
+      tags: [Friends]
+      summary: Получить полный список друзей
+      description: Возвращает массив друзей с базовой информацией – SteamID, ник, аватар, статус.
+      operationId: getFriends
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: json
+          in: query
+          description: Флаг «вернуть в JSON» (должен быть 1)
+          required: true
+          schema:
+            type: integer
+            enum: [1]
+            default: 1
+        - name: l
+          in: query
+          description: Язык интерфейса (например, russian)
+          required: false
+          schema:
+            type: string
+            example: "russian"
+      responses:
+        '200':
+          description: Список друзей успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendsListResponse'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещён
+        '429':
+          description: Слишком много запросов
+
+  /actions/Friends/Search:
+    get:
+      tags: [Friends]
+      summary: Найти друга по SteamID или нику
+      description: |
+        Ищет в списке друзей конкретного пользователя по
+        нику или SteamID. Возвращает массив совпадений.
+      operationId: searchFriend
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: query
+          in: query
+          description: Часть ника или SteamID
+          required: true
+          schema:
+            type: string
+            example: "76561199856322336"
+        - name: json
+          in: query
+          required: true
+          schema:
+            type: integer
+            enum: [1]
+            default: 1
+      responses:
+        '200':
+          description: Результат поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendSearchResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещён
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    FriendsListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Общее число друзей
+          example: 123
+        online:
+          type: integer
+          description: Количество друзей онлайн
+          example: 37
+        offline:
+          type: integer
+          description: Количество друзей офлайн
+          example: 86
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendInfo'
+      required: [total, online, offline, friends]
+
+    FriendSearchResponse:
+      type: object
+      properties:
+        matches:
+          type: integer
+          description: Количество найденных совпадений
+          example: 2
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendInfo'
+      required: [matches, friends]
+
+    FriendInfo:
+      type: object
+      properties:
+        steamid:
+          type: string
+          description: SteamID друга
+          example: "76561199856322336"
+        personaName:
+          type: string
+          description: Имя пользователя
+          example: "portes_46"
+        avatar:
+          type: string
+          format: uri
+          description: URL аватара 
+          example: "https://avatars.steamstatic.com/portes_46.jpg"
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, playing]
+          description: Текущий статус друга
+          example: "online"
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

@@ -1,0 +1,139 @@
+openapi: 3.0.1
+info:
+  title: Steam Game Avatars API
+  description: API для получения списка игровых аватаров Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Avatars
+    description: Управление игровыми аватарами
+
+paths:
+  /actions/GameAvatars/:
+    get:
+      tags: [Avatars]
+      summary: Получение списка игровых аватаров
+      description: |
+        Возвращает список доступных игровых аватаров, сгруппированных по играм.
+        Включает аватары из недавних, приобретенных и других доступных игр.
+      operationId: getGameAvatars
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: json
+          in: query
+          description: Флаг для возврата ответа в JSON формате (должен быть 1)
+          required: true
+          schema:
+            type: integer
+            enum: [1]
+            default: 1
+        - name: l
+          in: query
+          description: Язык интерфейса (например, russian)
+          required: false
+          schema:
+            type: string
+            example: "russian"
+      responses:
+        '200':
+          description: Успешный ответ со списком аватаров
+          headers:
+            cache-control:
+              description: Директивы кэширования
+              schema:
+                type: string
+                example: "private,max-age=300"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameAvatarsResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    GameAvatarsResponse:
+      type: object
+      properties:
+        baseAvaLink:
+          type: string
+          format: uri
+          description: Базовый URL для загрузки аватаров
+          example: "https://cdn.fastly.steamstatic.com/steamcommunity/public/images/avatars/"
+        rgRecentGames:
+          type: array
+          description: Список недавно использованных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+        rgOwnedGames:
+          type: array
+          description: Список приобретенных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+        rgOtherGames:
+          type: array
+          description: Список других доступных игр с аватарами
+          items:
+            $ref: '#/components/schemas/GameInfo'
+      example:
+        baseAvaLink: "https://cdn.fastly.steamstatic.com/steamcommunity/public/images/avatars/"
+        rgRecentGames: []
+        rgOwnedGames: []
+        rgOtherGames:
+          - appid: 3384330
+            name: "Art Strikers"
+            avatar_count: 1
+            avatars:
+              - ordinal: 0
+                avatar_hash: "4fb85ee791d84235f4f49a64887af6d402ad0cb6"
+
+    GameInfo:
+      type: object
+      properties:
+        appid:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор игры в Steam
+        name:
+          type: string
+          description: Название игры
+        avatar_count:
+          type: integer
+          description: Количество доступных аватаров для этой игры
+        avatars:
+          type: array
+          description: Список доступных аватаров
+          items:
+            $ref: '#/components/schemas/AvatarInfo'
+
+    AvatarInfo:
+      type: object
+      properties:
+        ordinal:
+          type: integer
+          description: Порядковый номер аватара
+        avatar_hash:
+          type: string
+          description: Хэш аватара для формирования URL
+          example: "4fb85ee791d84235f4f49a64887af6d402ad0cb6"
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

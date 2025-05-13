@@ -1,0 +1,157 @@
+openapi: 3.0.1
+info:
+  title: Steam Friend Groups API
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+tags:
+  - name: FriendGroups
+    description: Операции над группами друзей
+
+paths:
+  /actions/Friends/Groups:
+    post:
+      tags: [FriendGroups]
+      summary: Создать группу
+      security: [ 
+        { SteamAuth: [] } 
+      ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateGroupBody'}
+      responses: { 
+        '200': { $ref: '#/components/responses/OkGroup' }, 
+        '400': { description: Bad } 
+      }
+
+    get:
+      tags: [FriendGroups]
+      summary: Список групп
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer, 
+            enum: [1], 
+            default: 1 
+          }
+      responses: { 
+        '200': { $ref: '#/components/responses/GroupList' }, 
+        '401': { description: Unauthorized } 
+      }
+
+  /actions/Friends/Groups/{groupId}:
+    delete:
+      tags: [FriendGroups]
+      summary: Удалить группу
+      security: [ 
+        { SteamAuth: [] } 
+      ]
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { type: string, example: "group_987654321" }
+      responses: { 
+        '200': { $ref: '#/components/responses/OkGroup' }, 
+        '404': { description: Not found } 
+      }
+
+  /actions/Friends/Groups/{groupId}/members:
+    post:
+      tags: [FriendGroups]
+      summary: Добавить друга в группу
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { 
+            type: string, 
+            example: "group_987654321" 
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModifyMemberBody' }
+      responses: { 
+        '200': { $ref: '#/components/responses/OkMember' }, 
+        '404': { description: Not found } 
+      }
+
+components:
+  schemas:
+    CreateGroupBody:
+      type: object
+      properties:
+        name: { 
+          type: string, 
+          example: "7999" 
+        }
+      required: [name]
+
+    ModifyMemberBody:
+      type: object
+      properties:
+        steamid: { 
+          type: string, 
+          example: "76561198123456789" 
+        }
+      required: [steamid]
+
+    GroupInfo:
+      type: object
+      properties:
+        groupId: { type: string }
+        name: { type: string }
+        membersCount: { type: integer }
+      required: [groupId, name, membersCount]
+
+  responses:
+    OkGroup:
+      description: Успех для операций над группой
+      content: { 
+        application/json: {
+          schema: { 
+            type: object, properties: {
+              success: { type: boolean }, message: { type: string }
+            }, required: [success] 
+          } 
+        } 
+      }
+
+    OkMember:
+      description: Успех для операций с членом группы
+      content: { 
+        application/json: {
+          schema: { 
+            type: object, properties: {
+              success: { type: boolean }, message: { type: string }
+            }, required: [success] 
+          } 
+        } 
+      }
+
+    GroupList:
+      description: Список групп
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              total: { type: integer }
+              groups:
+                type: array
+                items: { $ref: '#/components/schemas/GroupInfo' }
+            required: [total, groups]
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure

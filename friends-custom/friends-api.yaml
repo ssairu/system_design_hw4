@@ -1,0 +1,671 @@
+openapi: 3.0.1
+info:
+  title: Steam Friends API
+  description: Полный API для работы с друзьями в Steam (блокировка, группы, заявки, статусы, список друзей)
+  version: 1.0.0
+  contact:
+    name: Steam Support
+    url: https://help.steampowered.com
+
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: FriendBlock
+    description: Блок / разблок пользователя
+  - name: FriendGroups
+    description: Операции над группами друзей
+  - name: FriendRequests
+    description: Операции с заявками в друзья
+  - name: FriendStatus
+    description: Получение и изменение статуса онлайн
+  - name: Friends
+    description: Операции со списком друзей
+
+paths:
+  /actions/Friends/Block:
+    post:                      
+      tags: [FriendBlock]
+      summary: Заблокировать пользователя
+      operationId: blockUser
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlockUserBody' }
+      responses:
+        '200': { $ref: '#/components/responses/BlockOk' }
+        '400': { description: Неверный запрос }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+    get:
+      tags: [FriendBlock]
+      summary: Список заблокированных
+      operationId: listBlocked
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer,
+            enum: [1],
+            default: 1 
+          }
+      responses:
+        '200':
+          description: Возвращает список заблокированных
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlockListResponse' }
+        '401': { description: Требуется вход в Steam }
+
+  /actions/Friends/Block/{steamid}:
+    delete:
+      tags: [FriendBlock]
+      summary: Разблокировать пользователя
+      operationId: unblockUser
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: steamid
+          required: true
+          schema: { type: string, example: "76561198123456789" }
+      responses:
+        '200': { $ref: '#/components/responses/BlockOk' }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+  /actions/Friends/Groups:
+    post:
+      tags: [FriendGroups]
+      summary: Создать группу
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateGroupBody'}
+      responses: { 
+        '200': { $ref: '#/components/responses/OkGroup' }, 
+        '400': { description: Bad } 
+      }
+
+    get:
+      tags: [FriendGroups]
+      summary: Список групп
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer, 
+            enum: [1], 
+            default: 1 
+          }
+      responses: { 
+        '200': { $ref: '#/components/responses/GroupList' }, 
+        '401': { description: Unauthorized } 
+      }
+
+  /actions/Friends/Groups/{groupId}:
+    delete:
+      tags: [FriendGroups]
+      summary: Удалить группу
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { type: string, example: "group_987654321" }
+      responses: { 
+        '200': { $ref: '#/components/responses/OkGroup' }, 
+        '404': { description: Not found } 
+      }
+
+  /actions/Friends/Groups/{groupId}/members:
+    post:
+      tags: [FriendGroups]
+      summary: Добавить друга в группу
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema: { 
+            type: string, 
+            example: "group_987654321" 
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModifyMemberBody' }
+      responses: { 
+        '200': { $ref: '#/components/responses/OkMember' }, 
+        '404': { description: Not found } 
+      }
+
+  /actions/Friends/Request:
+    post:
+      tags: [FriendRequests]
+      summary: Отправить заявку в друзья
+      operationId: sendFriendRequest
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FriendRequestCreate' }
+      responses:
+        '200':
+          description: Заявка успешно отправлена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Пользователь не найден }
+
+    get:
+      tags: [FriendRequests]
+      summary: Получить входящие и исходящие заявки
+      operationId: listFriendRequests
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - name: json
+          in: query
+          required: true
+          schema: { type: integer, enum: [1], default: 1 }
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestsListResponse' }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+
+  /actions/Friends/Request/{steamid}/accept:
+    put:
+      tags: [FriendRequests]
+      summary: Принять входящую заявку
+      operationId: acceptFriendRequest
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - name: steamid
+          in: path
+          required: true
+          description: SteamID пользователя, чью заявку принимаем
+          schema: { type: string, example: "76561199856322336" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActionConfirmBody' }
+      responses:
+        '200':
+          description: Заявка принята
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Заявка не найдена }
+
+  /actions/Friends/Request/{steamid}:
+    delete:
+      tags: [FriendRequests]
+      summary: Отклонить входящую или отменить исходящую заявку
+      operationId: deleteFriendRequest
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - name: steamid
+          in: path
+          required: true
+          description: SteamID пользователя, чью заявку отклоняем/отменяем
+          schema: { type: string, example: "76561199856322336" }
+      responses:
+        '200':
+          description: Заявка отклонена/отменена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Заявка не найдена }
+
+  /actions/Friends/Status:
+    get:
+      tags: [FriendStatus]
+      summary: Список статусов друзей
+      operationId: listFriendStatuses
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: query
+          name: json
+          required: true
+          schema: { 
+            type: integer, 
+            enum: [1],
+            default: 1 
+          }
+      responses:
+        '200':
+          description: Текущие статусы всех друзей
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendStatusList' }
+        '401': { description: Требуется вход в Steam }
+
+    put:
+      tags: [FriendStatus]
+      summary: Обновить собственный статус
+      operationId: updateMyStatus
+      security: [ { SteamAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateStatusBody' }
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatusUpdateResponse' }
+        '400': { description: Некорректный статус }
+        '401': { description: Требуется вход в Steam }
+
+  /actions/Friends/Status/{steamid}:
+    get:
+      tags: [FriendStatus]
+      summary: Статус конкретного друга
+      operationId: getFriendStatus
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - in: path
+          name: steamid
+          required: true
+          schema: { type: string, example: "76561198123456789" }
+      responses:
+        '200':
+          description: Статус найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendStatus' }
+        '401': { description: Требуется вход в Steam }
+        '404': { description: Пользователь не найден }
+
+  /actions/Friends/GetList:
+    get:
+      tags: [Friends]
+      summary: Получить полный список друзей
+      description: Возвращает массив друзей с базовой информацией – SteamID, ник, аватар, статус.
+      operationId: getFriends
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - name: json
+          in: query
+          description: Флаг «вернуть в JSON» (должен быть 1)
+          required: true
+          schema:
+            type: integer
+            enum: [1]
+            default: 1
+        - name: l
+          in: query
+          description: Язык интерфейса (например, russian)
+          required: false
+          schema:
+            type: string
+            example: "russian"
+      responses:
+        '200':
+          description: Список друзей успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendsListResponse'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещён
+        '429':
+          description: Слишком много запросов
+
+  /actions/Friends/Search:
+    get:
+      tags: [Friends]
+      summary: Найти друга по SteamID или нику
+      description: |
+        Ищет в списке друзей конкретного пользователя по
+        нику или SteamID. Возвращает массив совпадений.
+      operationId: searchFriend
+      security: [ { SteamAuth: [] } ]
+      parameters:
+        - name: query
+          in: query
+          description: Часть ника или SteamID
+          required: true
+          schema:
+            type: string
+            example: "76561199856322336"
+        - name: json
+          in: query
+          required: true
+          schema:
+            type: integer
+            enum: [1]
+            default: 1
+      responses:
+        '200':
+          description: Результат поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendSearchResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещён
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    BlockUserBody:
+      type: object
+      properties:
+        steamid: { type: string, example: "76561198123456789" }
+        reason:  { type: string, maxLength: 200, example: "Spam" }
+      required: [steamid]
+
+    BlockActionResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: "User blocked" }
+      required: [success]
+
+    BlockListResponse:
+      type: object
+      properties:
+        total:   { type: integer, example: 2 }
+        blocked:
+          type: array
+          items: { $ref: '#/components/schemas/BlockedUser' }
+      required: [total, blocked]
+
+    BlockedUser:
+      type: object
+      properties:
+        steamid:     { type: string, example: "76561198123456789" }
+        personaName: { type: string, example: "portes_46_hater" }
+        blockedAt:
+          type: string
+          format: date-time
+          example: "2025-03-03T13:03:03Z"
+      required: [steamid, blockedAt]
+
+    CreateGroupBody:
+      type: object
+      properties:
+        name: { 
+          type: string, 
+          example: "7999" 
+        }
+      required: [name]
+
+    ModifyMemberBody:
+      type: object
+      properties:
+        steamid: { 
+          type: string, 
+          example: "76561198123456789" 
+        }
+      required: [steamid]
+
+    GroupInfo:
+      type: object
+      properties:
+        groupId: { type: string }
+        name: { type: string }
+        membersCount: { type: integer }
+      required: [groupId, name, membersCount]
+
+    FriendRequestCreate:
+      type: object
+      properties:
+        steamid:
+          type: string
+          description: SteamID пользователя, которому отправляем заявку
+          example: "76561198123456789"
+        message:
+          type: string
+          description: Необязательное приветственное сообщение
+          maxLength: 200
+      required: [steamid]
+
+    ActionConfirmBody:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          description: Флаг подтверждения действия
+          example: true
+      required: [confirm]
+
+    FriendRequestActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Request accepted"
+      required: [success, message]
+
+    FriendRequestsListResponse:
+      type: object
+      properties:
+        incoming:
+          type: integer
+          description: Количество входящих заявок
+          example: 3
+        outgoing:
+          type: integer
+          description: Количество исходящих заявок
+          example: 2
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendRequestInfo'
+      required: [incoming, outgoing, requests]
+
+    FriendRequestInfo:
+      type: object
+      properties:
+        steamid:
+          type: string
+          example: "76561198123456789"
+        personaName:
+          type: string
+          example: "portes_46"
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: Тип заявки
+        sentAt:
+          type: string
+          format: date-time
+          example: "2025-05-05T15:55:05Z"
+
+    UpdateStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, invisible, playing]
+          example: online
+        nowPlaying:
+          type: string
+          description: Название игры или трека (необязательно)
+          example: "Counter-Strike 2"
+      required: [status]
+
+    FriendStatusList:
+      type: object
+      properties:
+        total:   { type: integer, example: 5 }
+        online:  { type: integer, example: 3 }
+        statuses:
+          type: array
+          items: { $ref: '#/components/schemas/FriendStatus' }
+      required: [total, statuses]
+
+    FriendStatus:
+      type: object
+      properties:
+        steamid:     { type: string, example: "76561198123456789" }
+        personaName: { type: string, example: "portes_46" }
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, invisible, playing]
+          example: playing
+        lastOnline:
+          type: string
+          format: date-time
+          example: "2025-05-05T15:05:05Z"
+        nowPlaying:
+          type: string
+          example: "Dota 2"
+      required: [steamid, status]
+
+    StatusUpdateResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: "Status set to away" }
+      required: [success]
+
+    FriendsListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Общее число друзей
+          example: 123
+        online:
+          type: integer
+          description: Количество друзей онлайн
+          example: 37
+        offline:
+          type: integer
+          description: Количество друзей офлайн
+          example: 86
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendInfo'
+      required: [total, online, offline, friends]
+
+    FriendSearchResponse:
+      type: object
+      properties:
+        matches:
+          type: integer
+          description: Количество найденных совпадений
+          example: 2
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendInfo'
+      required: [matches, friends]
+
+    FriendInfo:
+      type: object
+      properties:
+        steamid:
+          type: string
+          description: SteamID друга
+          example: "76561199856322336"
+        personaName:
+          type: string
+          description: Имя пользователя
+          example: "portes_46"
+        avatar:
+          type: string
+          format: uri
+          description: URL аватара 
+          example: "https://avatars.steamstatic.com/portes_46.jpg"
+        status:
+          type: string
+          enum: [online, offline, away, busy, snooze, playing]
+          description: Текущий статус друга
+          example: "online"
+
+  responses:
+    BlockOk:
+      description: Операция выполнена
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/BlockActionResponse' }
+
+    OkGroup:
+      description: Успех для операций над группой
+      content: { 
+        application/json: {
+          schema: { 
+            type: object, properties: {
+              success: { type: boolean }, message: { type: string }
+            }, required: [success] 
+          } 
+        } 
+      }
+
+    OkMember:
+      description: Успех для операций с членом группы
+      content: { 
+        application/json: {
+          schema: { 
+            type: object, properties: {
+              success: { type: boolean }, message: { type: string }
+            }, required: [success] 
+          } 
+        } 
+      }
+
+    GroupList:
+      description: Список групп
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              total: { type: integer }
+              groups:
+                type: array
+                items: { $ref: '#/components/schemas/GroupInfo' }
+            required: [total, groups]
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

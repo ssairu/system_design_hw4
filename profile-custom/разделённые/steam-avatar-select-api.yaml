@@ -1,0 +1,96 @@
+openapi: 3.0.1
+info:
+  title: Steam Avatar Selection API
+  description: API для выбора игрового аватара в профиле Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Avatar
+    description: Операции с игровыми аватарами
+
+paths:
+  /ogg/{appid}/selectAvatar:
+    post:
+      tags: [Avatar]
+      summary: Выбор игрового аватара
+      description: Устанавливает выбранный аватар из игры в качестве аватара профиля
+      operationId: selectGameAvatar
+      parameters:
+        - name: appid
+          in: path
+          description: Steam ID игры
+          required: true
+          schema:
+            type: integer
+            example: 2944200
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: "4c7750f3ef2fb2dd3f535926"
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum: [1]
+                  default: 1
+                selectedAvatar:
+                  type: integer
+                  description: Порядковый номер выбранного аватара (ordinal из списка аватаров)
+                  example: 0
+              required:
+                - sessionid
+                - json
+                - selectedAvatar
+      responses:
+        '200':
+          description: Успешное изменение аватара
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarSelectionResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    AvatarSelectionResponse:
+      type: object
+      properties:
+        success:
+          type: integer
+          enum: [1]
+          description: Флаг успешного выполнения (1 - успех)
+        message:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+      example:
+        success: 1
+        message: ""
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

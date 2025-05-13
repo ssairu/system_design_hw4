@@ -1,0 +1,194 @@
+openapi: 3.0.1
+info:
+  title: Steam Friend Request API
+  description: API для отправки/просмотра/отклонения входящих запросов, принятия/отмены заявок в друзья.
+  version: 1.0.0
+
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: FriendRequests
+    description: Операции с заявками в друзья
+
+paths:
+  /actions/Friends/Request:
+    post:
+      tags: [FriendRequests]
+      summary: Отправить заявку в друзья
+      operationId: sendFriendRequest
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FriendRequestCreate'
+      responses:
+        '200':
+          description: Заявка успешно отправлена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Пользователь не найден }
+
+  /actions/Friends/Requests:
+    get:
+      tags: [FriendRequests]
+      summary: Получить входящие и исходящие заявки
+      operationId: listFriendRequests
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: json
+          in: query
+          required: true
+          schema: { type: integer, enum: [1], default: 1 }
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestsListResponse' }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+
+  /actions/Friends/Request/{steamid}/accept:
+    put:
+      tags: [FriendRequests]
+      summary: Принять входящую заявку
+      operationId: acceptFriendRequest
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: steamid
+          in: path
+          required: true
+          description: SteamID пользователя, чью заявку принимаем
+          schema: { type: string, example: "76561199856322336" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionConfirmBody'
+      responses:
+        '200':
+          description: Заявка принята
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Заявка не найдена }
+
+  /actions/Friends/Request/{steamid}:
+    delete:
+      tags: [FriendRequests]
+      summary: Отклонить входящую или отменить исходящую заявку
+      operationId: deleteFriendRequest
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: steamid
+          in: path
+          required: true
+          description: SteamID пользователя, чью заявку отклоняем/отменяем
+          schema: { type: string, example: "76561199856322336" }
+      responses:
+        '200':
+          description: Заявка отклонена/отменена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FriendRequestActionResponse' }
+        '400': { description: Неверный запрос }
+        '401': { description: Не авторизован }
+        '403': { description: Доступ запрещён }
+        '404': { description: Заявка не найдена }
+
+components:
+  schemas:
+    FriendRequestCreate:
+      type: object
+      properties:
+        steamid:
+          type: string
+          description: SteamID пользователя, которому отправляем заявку
+          example: "76561198123456789"
+        message:
+          type: string
+          description: Необязательное приветственное сообщение
+          maxLength: 200
+      required: [steamid]
+
+    ActionConfirmBody:
+      type: object
+      properties:
+        confirm:
+          type: boolean
+          description: Флаг подтверждения действия
+          example: true
+      required: [confirm]
+
+    FriendRequestActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Request accepted"
+      required: [success, message]
+
+    FriendRequestsListResponse:
+      type: object
+      properties:
+        incoming:
+          type: integer
+          description: Количество входящих заявок
+          example: 3
+        outgoing:
+          type: integer
+          description: Количество исходящих заявок
+          example: 2
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendRequestInfo'
+      required: [incoming, outgoing, requests]
+
+    FriendRequestInfo:
+      type: object
+      properties:
+        steamid:
+          type: string
+          example: "76561198123456789"
+        personaName:
+          type: string
+          example: "portes_46"
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+          description: Тип заявки
+        sentAt:
+          type: string
+          format: date-time
+          example: "2025-05-05T15:55:05Z"
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Необходимо передавать cookies:
+        - steamLoginSecure
+        - sessionid
+        - browserid

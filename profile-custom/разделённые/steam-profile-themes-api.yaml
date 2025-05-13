@@ -1,0 +1,70 @@
+openapi: 3.0.1
+info:
+  title: Steam Player Service - Profile Themes API
+  description: API для управления темами профиля Steam
+  version: 1.0.0
+servers:
+  - url: https://api.steampowered.com
+    description: Основной API сервер Steam
+
+tags:
+  - name: ProfileThemes
+    description: Операции с темами профиля
+
+paths:
+  /IPlayerService/SetProfileTheme/v1:
+    post:
+      tags: [ProfileThemes]
+      summary: Установка темы профиля
+      description: Позволяет установить тему для профиля Steam пользователя
+      operationId: setProfileTheme
+      security:
+        - SteamAuth: []
+      parameters:
+        - name: access_token
+          in: query
+          description: JWT токен доступа Steam
+          required: true
+          schema:
+            type: string
+            example: "eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNjQ4NEU2Q19ERjY3NiIsICJzdWIiOiAiNzY1NjExOTk4NTYzMjIzMzYiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDcxMzM1MzAsICJuYmYiOiAxNzM4NDA3MTA4LCAiaWF0IjogMTc0NzA0NzEwOCwgImp0aSI6ICIwMDA5XzI2NDg0RTZDX0U2MTFBIiwgIm9hdCI6IDE3NDcwNDY5OTQsICJydF9leHAiOiAxNzQ5NjQzNjM4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTk1LjE5LjQyLjIyOSIsICJpcF9jb25maXJtZXIiOiAiMTk1LjE5LjQyLjIyOSIgfQ.H7E26ylDKUvTsrJJvMEzE_h6mOLuTiR6-T1IN8EB0AoGzX_mjS2znGLrQKIYaa1BYr3SQ2ZzuhW6Wa4SG-u7CA"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                input_protobuf_encoded:
+                  type: string
+                  description: Base64-кодированные protobuf-данные с идентификатором темы
+                  example: "CgZDb3NtaWM="
+              required:
+                - input_protobuf_encoded
+      responses:
+        '200':
+          description: Тема профиля успешно изменена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: object
+                    description: Пустой объект при успешном выполнении
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '429':
+          description: Слишком много запросов
+
+components:
+  securitySchemes:
+    SteamAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен доступа Steam

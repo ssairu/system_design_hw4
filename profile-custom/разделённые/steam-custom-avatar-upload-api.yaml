@@ -1,0 +1,133 @@
+openapi: 3.0.1
+info:
+  title: Steam File Uploader API
+  description: API для загрузки пользовательских аватаров в Steam
+  version: 1.0.0
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: Avatar
+    description: Операции с пользовательскими аватарами
+
+paths:
+  /actions/FileUploader/:
+    post:
+      tags: [Avatar]
+      summary: Загрузка пользовательского аватара
+      description: Позволяет загрузить пользовательское изображение в качестве аватара профиля
+      operationId: uploadAvatar
+      security:
+        - SteamAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Файл изображения для загрузки
+                type:
+                  type: string
+                  description: Тип загружаемого файла (должно быть player_avatar_image)
+                  enum: [player_avatar_image]
+                  default: "player_avatar_image"
+                sId:
+                  type: string
+                  description: SteamID пользователя
+                  example: "76561199856322336"
+                sessionid:
+                  type: string
+                  description: Идентификатор сессии (должен совпадать с cookie sessionid)
+                  example: "4c7750f3ef2fb2dd3f535926"
+                doSub:
+                  type: integer
+                  description: Флаг подтверждения загрузки (должен быть 1)
+                  enum: [1]
+                  default: 1
+                json:
+                  type: integer
+                  description: Флаг для возврата ответа в JSON (должен быть 1)
+                  enum: [1]
+                  default: 1
+              required:
+                - avatar
+                - type
+                - sId
+                - sessionid
+                - doSub
+                - json
+      responses:
+        '200':
+          description: Успешная загрузка аватара
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Неверный запрос
+        '401':
+          description: Не авторизован
+        '403':
+          description: Доступ запрещен
+        '413':
+          description: Файл слишком большой
+        '429':
+          description: Слишком много запросов
+
+components:
+  schemas:
+    AvatarUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Флаг успешного выполнения
+          example: true
+        images:
+          type: object
+          description: URL загруженного аватара в разных размерах
+          properties:
+            "0":
+              type: string
+              format: uri
+              description: URL маленького аватара (32x32)
+              example: "https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2.jpg"
+            full:
+              type: string
+              format: uri
+              description: URL полного аватара (184x184)
+              example: "https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_full.jpg"
+            medium:
+              type: string
+              format: uri
+              description: URL среднего аватара (64x64)
+              example: "https://avatars.fastly.steamstatic.com/3135c6ef90dd781768090f914ab270c281b762f2_medium.jpg"
+        hash:
+          type: string
+          description: Хэш загруженного аватара
+          example: "3135c6ef90dd781768090f914ab270c281b762f2"
+        message:
+          type: string
+          description: Сообщение об ошибке (пустое при успехе)
+          example: ""
+      required:
+        - success
+        - images
+        - hash
+        - message
+
+  securitySchemes:
+    SteamAuth:
+      type: apiKey
+      in: cookie
+      name: steamLoginSecure
+      description: |
+        Требуется аутентификация через Steam. Должны быть предоставлены cookies:
+        - steamLoginSecure
+        - sessionid (должен совпадать с параметром в форме)
+        - browserid
