@@ -1,0 +1,486 @@
+openapi: 3.0.1
+info:
+  title: Steam Music API
+  version: 1.0.0
+  description: API для управления музыкой в steam
+
+servers:
+  - url: https://steamcommunity.com
+    description: Основной сервер Steam Community
+
+tags:
+  - name: ConnectMusicService
+    description: Интеграция стороннего сервиса
+  - name: ManageNotification
+    description: Управление уведомлениями (overlay)
+  - name: Playlist
+    description: Управление плейлистом непосредственно из steam
+
+paths:
+  /connect/auth:
+    post:
+      tags: [ConnectMusicService]
+      summary: Авторизация стороннего музыкального сервиса
+      description: Позволяет подключить аккаунт музыкального сервиса (Spotify, ЯндексМузыка и т.д.) к Steam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                service_name:
+                  type: string
+                  example: "spotify"
+                auth_token:
+                  type: string
+                  example: "abc123xyz456"
+      responses:
+        '200':
+          description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  connection_id:
+                    type: string
+                    example: "conn_12345"
+
+  /connect/leave:
+    delete:
+      tags: [ConnectMusicService]
+      summary: Отключение музыкального сервиса
+      description: Отключает интеграцию с музыкальным сервисом
+      responses:
+        '200':
+          description: Успешное отключение
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "disconnected"
+
+  /notifications/change:
+    put:
+      tags: [ManageNotification]
+      summary: Полное обновление настроек уведомлений
+      description: Полная замена текущих настроек уведомлений
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_notifications:
+                  type: boolean
+                  example: true
+                duration_sec:
+                  type: integer
+                  example: 5
+                show_album_art:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Настройки полностью обновлены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "fully_updated"
+
+    post:
+      tags: [ManageNotification]
+      summary: Частичное изменение настроек уведомлений
+      description: Изменение отдельных параметров уведомлений
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_notifications:
+                  type: boolean
+                  example: true
+                duration_sec:
+                  type: integer
+                  example: 5
+                show_album_art:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Настройки сохранены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "updated"
+
+  /notifications/privacy:
+    put:
+      tags: [ManageNotification]
+      summary: Полное обновление настроек приватности
+      description: Замена всех текущих настроек приватности
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_track_title:
+                  type: boolean
+                  example: true
+                show_artist:
+                  type: boolean
+                  example: true
+                show_album:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Настройки приватности полностью обновлены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "privacy_fully_updated"
+
+  /playlist/tracks/{track_id}:
+    delete:
+      tags: [Playlist]
+      summary: Удалить трек из плейлиста
+      description: Удаление конкретного трека по ID
+      parameters:
+        - name: track_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "track_123"
+      responses:
+        '200':
+          description: Трек успешно удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "track_deleted"
+                  removed_track:
+                    type: string
+                    example: "track_123"
+
+  /playlist/tracks:
+    get:
+      tags: [Playlist]
+      summary: Получить треки плейлиста
+      description: Возвращает список треков в текущем плейлисте
+      responses:
+        '200':
+          description: Список треков
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tracks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "track_123"
+                        title:
+                          type: string
+                          example: "Song Name"
+                        artist:
+                          type: string
+                          example: "Artist Name"
+                        duration_sec:
+                          type: integer
+                          example: 237
+
+    put:
+      tags: [Playlist]
+      summary: Поменять плейлист
+      description: Полная замена текущего плейлиста новым
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tracks:
+                  type: array
+                  items:
+                    type: string
+                  example: ["track_456", "track_789"]
+      responses:
+        '200':
+          description: Плейлист полностью заменен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "playlist_replaced"
+                  new_track_count:
+                    type: integer
+                    example: 2
+
+  /playlist/change:
+    post:
+      tags: [Playlist]
+      summary: Изменения в текущем плейлисте
+      description: Добавление/удаление треков или изменение порядка
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [add, remove, reorder]
+                  example: "add"
+                tracks:
+                  type: array
+                  items:
+                    type: string
+                  example: ["track_456"]
+                position:
+                  type: integer
+                  example: 3
+      responses:
+        '200':
+          description: Плейлист обновлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "playlist_updated"
+                  track_count:
+                    type: integer
+                    example: 15
+
+components:
+  schemas:
+    AuthRequest:
+      type: object
+      properties:
+        service_name:
+          type: string
+          enum: [spotify, ya_music, vk_music, apple_music, youtube_music]
+          example: "spotify"
+        auth_token:
+          type: string
+          example: "abc123xyz456"
+      required: [service_name, auth_token]
+
+    AuthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        connection_id:
+          type: string
+          example: "conn_12345"
+        expires_at:
+          type: string
+          format: date-time
+          example: "2023-12-31T23:59:59Z"
+
+    BasicStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+
+    NotificationSettings:
+      type: object
+      properties:
+        show_notifications:
+          type: boolean
+          example: true
+        duration_sec:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 5
+        show_album_art:
+          type: boolean
+          example: true
+        notification_position:
+          type: string
+          enum: [top-left, top-right, bottom-left, bottom-right]
+          example: "bottom-right"
+
+    PrivacySettings:
+      type: object
+      properties:
+        show_track_title:
+          type: boolean
+          example: true
+        show_artist:
+          type: boolean
+          example: true
+        show_album:
+          type: boolean
+          example: false
+        show_to_friends_only:
+          type: boolean
+          example: true
+
+    Track:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "track_123"
+        title:
+          type: string
+          example: "Song Name"
+        artist:
+          type: string
+          example: "Artist Name"
+        album:
+          type: string
+          example: "Album Name"
+        duration_sec:
+          type: integer
+          example: 237
+        cover_url:
+          type: string
+          format: uri
+          example: "https://example.com/cover.jpg"
+
+    PlaylistTracksResponse:
+      type: object
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Track'
+        total_duration_sec:
+          type: integer
+          example: 3567
+        last_updated:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+
+    ReplacePlaylistRequest:
+      type: object
+      properties:
+        tracks:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          example: ["track_456", "track_789"]
+      required: [tracks]
+
+    ModifyPlaylistRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [add, remove, reorder]
+          example: "add"
+        tracks:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          example: ["track_456"]
+        position:
+          type: integer
+          minimum: 0
+          example: 3
+      required: [action, tracks]
+
+    PlaylistUpdateResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "playlist_updated"
+        track_count:
+          type: integer
+          example: 15
+        changes:
+          type: array
+          items:
+            type: string
+          example: ["added: track_456"]
+
+    TrackDeleteResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "track_deleted"
+        removed_track:
+          type: string
+          example: "track_123"
+        new_count:
+          type: integer
+          example: 14
+
+  parameters:
+    TrackIdParam:
+      name: track_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "track_123"
+      description: Уникальный идентификатор трека в системе
+
+  securitySchemes:
+    SteamAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://steamcommunity.com/oauth/authorize
+          tokenUrl: https://steamcommunity.com/oauth/token
+          scopes:
+            music.read: Чтение музыкальных данных
+            music.write: Изменение музыкальных данных
+            notifications: Управление уведомлениями
